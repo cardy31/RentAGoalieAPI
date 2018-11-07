@@ -1,4 +1,5 @@
 RentAGoalie/gmail_key.txt
 RentAGoalie/secret_key.txt
 .idea
-venv/*
+venv
+__pycache__
