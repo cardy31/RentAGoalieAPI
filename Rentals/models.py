@@ -83,25 +83,18 @@ class Profile(models.Model):
             profile.access_token = str(Token.objects.get(user=User.objects.get(pk=instance.id)))
             profile.save()
 
-    # @staticmethod
-    # @receiver(post_save, sender=User)
-    # def hash_user_password(sender, instance, created, **kwargs):
-    #     user = User.objects.get(pk=instance.id)
-    #     user.set_password(user.password)
-    #     user.save()
-
     @staticmethod
     @receiver(post_save, sender=User)
     def send_verification_email(sender, instance, created, **kwargs):
-        user = instance
-        subject = 'Verify Your Rent A Goalie Account'
-        body = render_to_string('activate_email.html', {
-            'user': user,
-            'domain': CURRENT_SITE,
-            'uid': urlsafe_base64_encode(force_bytes(user.pk)).decode(),
-            'token': Profile.objects.get(pk=user.id).reset_token,
-        })
-        to_email = user.email
-        email = EmailMessage(subject, body, to=[to_email])
-        email.send()
-
+        if created:
+            user = instance
+            subject = 'Verify Your Rent A Goalie Account'
+            body = render_to_string('activate_email.html', {
+                'user': user,
+                'domain': CURRENT_SITE,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)).decode(),
+                'token': Profile.objects.get(pk=user.id).reset_token,
+            })
+            to_email = user.email
+            email = EmailMessage(subject, body, to=[to_email])
+            email.send()

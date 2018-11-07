@@ -19,16 +19,15 @@ WAIT_TIME = 5
 CURRENT_SITE = 'localhost:8000'
 
 
-"""
-Normal auth
-user: id of user
-game: id of game
-goalie: id of goalie
-Returns:
-    200 if added to queue
-    202 if given the game
-    410 if the game is already filled
-"""
+# Normal auth
+# user: id of user
+# game: id of game
+# goalie: id of goalie
+# Returns:
+#     200 if added to queue
+#     202 if given the game
+#     410 if the game is already filled
+# TODO: Add test to make sure ApplyForGame is working
 class ApplyForGame(APIView):
     def post(self, request):
         print("Goalie applied!")
@@ -189,7 +188,7 @@ class UserDetail(generics.RetrieveUpdateDestroyAPIView):
 @api_view(['GET'])
 def api_root(request, given_format=None):
     return Response({
-        # 'activate': reverse('activate', request=request, format=given_format),
+        'activate': reverse('activate-account', request=request, format=given_format),
         'apply': reverse('apply', request=request, format=given_format),
         'check-username': reverse('check-username', request=request, format=given_format),
         'check-email': reverse('check-email', request=request, format=given_format),

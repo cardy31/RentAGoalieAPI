@@ -11,7 +11,7 @@ urlpatterns = format_suffix_patterns([
 
     # Users go here following activation link in email
     url(r'^activate/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
-        views.activate, name='activate'),
+        views.activate, name='activate-account'),
 
     # Used to get a token for a user
     url(r'^api-token-auth/', rest_views.obtain_auth_token),
