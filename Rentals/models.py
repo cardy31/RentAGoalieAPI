@@ -85,16 +85,6 @@ class Profile(models.Model):
 
     @staticmethod
     @receiver(post_save, sender=User)
-    def hash_user_password(sender, instance, created, **kwargs):
-        if created:
-            user = User.objects.get(pk=instance.id)
-            if user.password[:6] != 'pbkdf2':
-                print('User password is: {}'.format(user.password))
-                user.set_password(user.password)
-                user.save()
-
-    @staticmethod
-    @receiver(post_save, sender=User)
     def send_verification_email(sender, instance, created, **kwargs):
         if created:
             user = instance

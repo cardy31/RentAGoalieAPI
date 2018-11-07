@@ -188,6 +188,7 @@ class UserDetail(generics.RetrieveUpdateDestroyAPIView):
 @api_view(['GET'])
 def api_root(request, given_format=None):
     return Response({
+        'activate': reverse('activate-account', request=request, format=given_format),
         'apply': reverse('apply', request=request, format=given_format),
         'check-username': reverse('check-username', request=request, format=given_format),
         'check-email': reverse('check-email', request=request, format=given_format),
@@ -197,3 +198,4 @@ def api_root(request, given_format=None):
         'profile': reverse('profile-list', request=request, format=given_format),
         'user': reverse('user-list', request=request, format=given_format),
     })
+
