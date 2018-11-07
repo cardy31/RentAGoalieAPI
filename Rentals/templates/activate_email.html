@@ -1,5 +1,5 @@
 {% autoescape off %}
 Hi {{ user.username }},
 Please click on the link to confirm your registration,
-https://www.robcardy.com{% url 'activate' uidb64=uid token=token %}
+https://www.robcardy.com{% url 'activate-account' uidb64=uid token=token %}
 {% endautoescape %}
