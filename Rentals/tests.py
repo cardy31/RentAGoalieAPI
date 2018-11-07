@@ -1,13 +1,22 @@
 from django.contrib.auth.models import User
-from rest_framework.reverse import reverse
-from rest_framework.test import APITestCase
+
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from Rentals.models import *
+from rest_framework.reverse import reverse
+from rest_framework.test import APITestCase
 
+from Rentals.models import Game, Location, Message, Profile
+
+# TODO: Write tests for update, patch, and delete
+
+# TODO: Write tests that check token generation
+
+# TODO: Write tests that check password reset
+
+# TODO: Write test that account activation via email
 
 # Create your tests here.
-class AccountCreationTest(APITestCase):
+class UserCreation(APITestCase):
     def setUp(self):
         # We want to go ahead and originally create a user.
         self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
@@ -18,20 +27,16 @@ class AccountCreationTest(APITestCase):
         self.create_url = reverse('user-list')
 
     def test_create_user(self):
-        """
-        Ensure we can create a new user and a valid token is created with it.
-        """
+        # Ensure we can create a new user and a valid token is created with it.
         data = {
-            "username": "foobar",
-            "email": "foobar@example.com",
-            "password": "somepassword",
-            "first_name": "Jonny",
-            "last_name": "Tester",
+            'username': 'foobar',
+            'email': 'foobar@example.com',
+            'password': 'somepassword',
+            'first_name': 'Jonny',
+            'last_name': 'Tester',
         }
 
         response = self.client.post(self.create_url, data, format='json')
-        print(response.data)
-        user = User.objects.latest('id')
 
         # Check that status code is 201
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -44,271 +49,97 @@ class AccountCreationTest(APITestCase):
         self.assertEqual(response.data['last_name'], data['last_name'])
         self.assertFalse('password' in response.data)
 
-    def test_create_user_with_short_password(self):
-        """
-        Ensure user is not created for password lengths less than 8.
-        """
-        data = {
-                "username": "foobar",
-                "email": "foobarbaz@example.com",
-                "password": "foo"
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(len(response.data['password']), 1)
-
-    def test_create_user_with_no_password(self):
-        data = {
-                "username": "foobar",
-                "email": "foobarbaz@example.com",
-                "password": ""
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(len(response.data['password']), 1)
-
-    def test_create_user_with_too_long_username(self):
-        data = {
-            "username": "foo"*30,
-            "email": "foobarbaz@example.com",
-            "password": "foobar"
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(len(response.data['username']), 1)
+        # Check that a profile was created as well
+        self.assertEqual(Profile.objects.count(), 2)
 
     def test_create_user_with_no_username(self):
         data = {
-                "username": "",
-                "email": "foobarbaz@example.com",
-                "password": "foobar"
+                'username': '',
+                'email': 'foobarbaz@example.com',
+                'password': 'foobar'
                 }
 
         response = self.client.post(self.create_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(len(response.data['username']), 1)
+        self.assertEqual(response.data['username'][0], 'This field may not be blank.')
 
     def test_create_user_with_preexisting_username(self):
         data = {
-                "username": "testuser",
-                "email": "user@example.com",
-                "password": "testuser"
+                'username': 'testuser',
+                'email': 'user@example.com',
+                'password': 'testuser'
                 }
 
         response = self.client.post(self.create_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(len(response.data['username']), 1)
-
-    def test_create_user_with_preexisting_email(self):
-        data = {
-            "username": "testuser2",
-            "email": "test@example.com",
-            "password": "testuser"
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(len(response.data['email']), 1)
+        self.assertEqual(response.data['username'][0], 'A user with that username already exists.')
 
     def test_create_user_with_invalid_email(self):
         data = {
-            "username": "foobarbaz",
-            "email": "testing",
-            "passsword": "foobarbaz"
+            'username': 'foobarbaz',
+            'email': 'invalid.email',
+            'passsword': 'foobarbaz'
         }
 
         response = self.client.post(self.create_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(len(response.data['email']), 1)
-
-    def test_create_user_with_no_email(self):
-        data = {
-            "username": "foobar",
-            "email": "",
-            "password": "foobarbaz"
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(len(response.data['email']), 1)
-
-    def test_profile_create_default(self):
-        data = {
-            "username": "foobar",
-            "email": "foobar@example.com",
-            "password": "somepassword",
-            "first_name": "Jonny",
-            "last_name": "Tester",
-        }
-        # Check that status code is 201
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['profile']['is_goalie'], True)
-        self.assertEqual(response.data['profile']['rating'], 0.0)
-        self.assertEqual(response.data['profile']['games_played'], 0)
-
-    def test_profile_create_non_default(self):
-        data = {
-            "username": "foobar",
-            "email": "foobar@example.com",
-            "password": "somepassword",
-            "first_name": "Jonny",
-            "last_name": "Tester",
-            "is_goalie": False,
-            "rating": '3.0',
-            "games_played": 4,
-            'skill_level': 2,
-        }
-        # Check that status code is 201
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['profile']['is_goalie'], False)
-        self.assertEqual(response.data['profile']['rating'], 3.0)
-        self.assertEqual(response.data['profile']['games_played'], 4)
-
-    def test_profile_create_bad_rating(self):
-        data = {
-            "username": "foobar",
-            "email": "foobar@example.com",
-            "password": "somepassword",
-            "first_name": "Jonny",
-            "last_name": "Tester",
-            "rating": '6.0',
-        }
-        # Check that status code is 201
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_profile_create_bad_games_played(self):
-        data = {
-            "username": "foobar",
-            "email": "foobar@example.com",
-            "password": "somepassword",
-            "first_name": "Jonny",
-            "last_name": "Tester",
-            "games_played": -1890,
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_profile_create_bad_is_goalie(self):
-        data = {
-            "username": "foobar",
-            "email": "foobar@example.com",
-            "password": "somepassword",
-            "first_name": "Jonny",
-            "last_name": "Tester",
-            "is_goalie": "Cheese",
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['email'][0], 'Enter a valid email address.')
 
 
-class GoalieTest(APITestCase):
+class GameCreation(APITestCase):
     def setUp(self):
-        # Create a user for testing
-        self.test_user = User.objects.create_user('tester_one', 'test@gmail.com', 'testpassword')
-        self.test_user.first_name = 'Hannah'
-        self.test_user.last_name = 'Test'
+        self.test_user_1 = User.objects.create_user('tester_one', 'test1@fakefalse.com', 'test1password')
+        self.test_user_1.first_name = 'Hannah'
+        self.test_user_1.last_name = 'Test'
 
-        # URL for creation
-        self.create_url = reverse('goalie-list')
+        self.test_user_2 = User.objects.create_user('tester_two', 'test2@fakefalse.com', 'test2password')
+        self.test_user_2.first_name = 'Rob'
+        self.test_user_2.last_name = 'Tester'
 
-        # Create locations
-        self.location_1 = Location.objects.create()
-        self.location_1.name = "Kitchener"
-        self.location_1.save()
-        self.location_2 = Location.objects.create()
-        self.location_2.name = "Toronto"
-        self.location_2.save()
-        self.location_3 = Location.objects.create()
-        self.location_3.name = "Ottawa"
-        self.location_3.save()
+        self.location = Location.objects.create(name='Kitchener',
+                                                latitude=43.4516395,
+                                                longitude=-80.49253369999997)
 
-    def test_create_default(self):
-        data = {
-            'location_ids': [1],  # One location is mandatory
-        }
+        self.create_url = reverse('game-list')
 
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['user'], None)
-        self.assertEqual(response.data['location_ids'], [1])
-        self.assertEqual(response.data['skill_level'], 5)
-
-    def test_create_non_default(self):
+    def test_create(self):
         data = {
             'user': 1,
-            'location_ids': [1, 2],
-            'skill_level': 2
+            'skill_level': 3,
+            'location': self.location.id,
+            'game_time': '2018-12-25T14:30:00Z',
+            'two_goalies_needed': True,
         }
-        response = self.client.post(reverse('goalie-list'), data, format='json')
+
+        response = self.client.post(self.create_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['user'], 1)
-        self.assertEqual(response.data['location_ids'], [1, 2])
-        self.assertEqual(response.data['skill_level'], 2)
+        self.assertEqual(Location.objects.count(), 1)
+        # self.assertEqual(response.data['user'], data['user'])
+        self.assertEqual(response.data['location'], data['location'])
+        self.assertEqual(response.data['game_time'], data['game_time'])
+        self.assertEqual(response.data['two_goalies_needed'], data['two_goalies_needed'])
 
-    def test_create_invalid_user_1(self):
-        data = {
-            'user': -20,
-            'location_ids': [1],
-        }
-        response = self.client.post(reverse('goalie-list'), data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_create_invalid_user_2(self):
-        data = {
-            'user': 40,
-            'location_ids': [1],
-        }
-        response = self.client.post(reverse('goalie-list'), data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+class LocationCreation(APITestCase):
+    def setUp(self):
+        self.create_url = reverse('location-list')
 
-    def test_create_invalid_skill_level_1(self):
+    def test_create(self):
         data = {
-            'location_ids': [1],
-            'skill_level': -5,
+            'name': 'Kitchener',
+            'latitude': 43.45164,
+            'longitude': -80.492534,
         }
-        response = self.client.post(reverse('goalie-list'), data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_create_invalid_skill_level_2(self):
-        data = {
-            'location_ids': [1],
-            'skill_level': 20,
-        }
-        response = self.client.post(reverse('goalie-list'), data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_create_invalid_location_1(self):
-        data = {
-            'location_ids': [-1],
-        }
-        response = self.client.post(reverse('goalie-list'), data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_create_invalid_location_2(self):
-        data = {
-            'location_ids': [1, 2, 20],
-        }
-        response = self.client.post(reverse('goalie-list'), data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(self.create_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Location.objects.count(), 1)
+        self.assertEqual(response.data['name'], data['name'])
+        self.assertEqual(response.data['latitude'], data['latitude'])
+        self.assertEqual(response.data['longitude'], data['longitude'])
 
 
 class MessageTest(APITestCase):
@@ -321,24 +152,28 @@ class MessageTest(APITestCase):
         self.test_user_2.first_name = 'Rob'
         self.test_user_2.last_name = 'Tester'
 
+        self.location = Location.objects.create()
+
+        self.game = Game.objects.create(location=self.location)
+
         # URL for creation
         self.create_url = reverse('message-list')
 
-    # def test_create_default(self):
+    def test_create(self):
+        data = {
+            'game': self.game.id,
+            'body': 'This is my test message. Hello other person',
+            'game_user': 1,
+            'goalie_user': 2,
+            'sender_is_goalie': True
+        }
 
-
-
-'''
-class GameTest(APITestCase):
-    def setUp(self):
-        # We want to go ahead and originally create a user.
-        self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
-        self.test_user.first_name = 'Jonny'
-        self.test_user.last_name = 'Test'
-
-        # URL for creating an account.
-        self.create_url = reverse('game-list')
-
-    # def test_game_create(self):
-
-'''
+        response = self.client.post(self.create_url, data, format='json')
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Message.objects.count(), 1)
+        self.assertEqual(response.data['game'], data['game'])
+        self.assertEqual(response.data['body'], data['body'])
+        self.assertEqual(response.data['game_user'], data['game_user'])
+        self.assertEqual(response.data['goalie_user'], data['goalie_user'])
+        self.assertEqual(response.data['sender_is_goalie'], data['sender_is_goalie'])

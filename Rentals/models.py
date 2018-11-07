@@ -20,7 +20,7 @@ class Game(models.Model):
     skill_level = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], default=5)  # 1 is best
     location = models.ForeignKey('Location', on_delete=models.CASCADE)
     # Format is 2018-05-16 20:00:00
-    game_time = models.DateTimeField(default='1970-01-01T00:00:00.000000Z', validators=[])
+    game_time = models.DateTimeField(default='1970-01-01T00:00:00Z', validators=[])
     creation_time = models.DateTimeField(auto_now=True)
     goalie_one = models.ForeignKey(User, related_name='goalieOne', null=True, on_delete=models.CASCADE)
     goalie_two = models.ForeignKey(User, related_name='goalieTwo', null=True, on_delete=models.CASCADE)
@@ -54,9 +54,10 @@ class Location(models.Model):
 class Message(models.Model):
     game = models.ForeignKey('Game', on_delete=models.CASCADE)
     body = models.CharField(max_length=5000, default="")
-    goalie = models.ForeignKey(User, related_name='gameGoalie', on_delete=models.CASCADE)
-    creation_time = models.DateTimeField(auto_now=True)
+    game_user = models.ForeignKey(User, related_name='gameRenter', on_delete=models.CASCADE)
+    goalie_user = models.ForeignKey(User, related_name='gameGoalie', on_delete=models.CASCADE)
     sender_is_goalie = models.BooleanField(default=False)
+    creation_time = models.DateTimeField(auto_now=True)
 
 
 class Profile(models.Model):

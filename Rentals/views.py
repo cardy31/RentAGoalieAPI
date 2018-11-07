@@ -141,17 +141,17 @@ class CheckEmailUnique(APIView):
 
 
 # Location Model Views
-class LocationList(generics.ListAPIView):
+class LocationList(generics.ListCreateAPIView):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
 
 
-class LocationDetail(generics.RetrieveAPIView):
+class LocationDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
 
 
-# Location Model Views
+# Message Model Views
 class MessageList(generics.ListCreateAPIView):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
@@ -173,7 +173,7 @@ class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProfileSerializer
 
 
-# auth.User Model Views
+# User Model Views
 class UserList(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer

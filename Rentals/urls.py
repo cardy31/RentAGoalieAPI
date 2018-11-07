@@ -9,13 +9,24 @@ urlpatterns = format_suffix_patterns([
     # Root URL
     url(r'^$', views.api_root),
 
-    url(r'^location/$',
-        views.LocationList.as_view(),
-        name='location-list'),
-    url(r'^location/(?P<pk>[0-9]+)/$',
-        views.LocationDetail.as_view(),
-        name='location-detail'),
+    # Users go here following activation link in email
+    url(r'^activate/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
+        views.activate, name='activate'),
 
+    # Used to get a token for a user
+    url(r'^api-token-auth/', rest_views.obtain_auth_token),
+
+    # Login and logout view for the browseable API
+    url(r'api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+
+    # Let goalies apply for games they would like to play in
+    url(r'^apply/$', views.ApplyForGame.as_view(), name='apply'),
+
+    # Let the front-end check if a username or email is already in use
+    url(r'^check-username/$', views.CheckUsernameUnique.as_view(), name='check-username'),
+    url(r'^check-email/$', views.CheckEmailUnique.as_view(), name='check-email'),
+
+    # Game
     url(r'^game/$',
         views.GameList.as_view(),
         name='game-list'),
@@ -23,6 +34,15 @@ urlpatterns = format_suffix_patterns([
         views.GameDetail.as_view(),
         name='game-detail'),
 
+    # Location
+    url(r'^location/$',
+        views.LocationList.as_view(),
+        name='location-list'),
+    url(r'^location/(?P<pk>[0-9]+)/$',
+        views.LocationDetail.as_view(),
+        name='location-detail'),
+
+    # Message
     url(r'^message/$',
         views.MessageList.as_view(),
         name='message-list'),
@@ -30,6 +50,7 @@ urlpatterns = format_suffix_patterns([
         views.MessageDetail.as_view(),
         name='message-detail'),
 
+    # Profile
     url(r'^profile/$',
         views.ProfileList.as_view(),
         name='profile-list'),
@@ -44,26 +65,8 @@ urlpatterns = format_suffix_patterns([
     url(r'^user/(?P<pk>[0-9]+)/$',
         views.UserDetail.as_view(),
         name='user-detail'),
-    url(r'^activate/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
-        views.activate, name='activate'),
+
 ])
-
-# Login and logout view for the browseable API
-urlpatterns += [
-    url(r'api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-]
-
-# Account creation views
-urlpatterns += [
-    url(r'^api-token-auth/', rest_views.obtain_auth_token),
-]
-
-# View for goalies to apply to games
-urlpatterns += [
-    url(r'^apply/$', views.ApplyForGame.as_view(), name='apply'),
-    url(r'^check-username/$', views.CheckUsernameUnique.as_view(), name='check-username'),
-    url(r'^check-email/$', views.CheckEmailUnique.as_view(), name='check-email'),
-]
 
 # Password reset views
 urlpatterns += [

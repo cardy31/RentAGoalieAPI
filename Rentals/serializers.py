@@ -6,7 +6,7 @@ from .models import Game, Location, Message, Profile
 class GameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Game
-        fields = ('id', 'skill_level', 'location',
+        fields = ('id', 'user', 'skill_level', 'location',
                   'game_time', 'creation_time', 'goalie_one',
                   'goalie_two', 'two_goalies_needed')
 
@@ -20,7 +20,7 @@ class LocationSerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
-        fields = ('id', 'game', 'body', 'goalie', 'creation_time', 'sender_is_goalie')
+        fields = ('id', 'game', 'body', 'game_user', 'goalie_user', 'creation_time', 'sender_is_goalie')
 
 
 class ProfileSerializer(serializers.ModelSerializer):
