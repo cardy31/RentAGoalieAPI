@@ -89,7 +89,6 @@ class Profile(models.Model):
         if created:
             user = User.objects.get(pk=instance.id)
             if user.password[:6] != 'pbkdf2':
-                print('User password is: {}'.format(user.password))
                 user.set_password(user.password)
                 user.save()
 

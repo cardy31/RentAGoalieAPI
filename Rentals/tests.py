@@ -14,8 +14,157 @@ from Rentals.models import Game, Location, Message, Profile
 
 # TODO: Write test that account activation via email
 
-# Create your tests here.
-class UserCreation(APITestCase):
+
+class GameCreate(APITestCase):
+    def setUp(self):
+        self.test_user_1 = User.objects.create_user('tester_one', 'test1@fakefalse.com', 'test1password')
+        self.test_user_1.first_name = 'Hannah'
+        self.test_user_1.last_name = 'Test'
+
+        self.test_user_2 = User.objects.create_user('tester_two', 'test2@fakefalse.com', 'test2password')
+        self.test_user_2.first_name = 'Rob'
+        self.test_user_2.last_name = 'Tester'
+
+        self.location = Location.objects.create(name='Kitchener',
+                                                latitude=43.4516395,
+                                                longitude=-80.49253369999997)
+
+        self.create_url = reverse('game-list')
+
+    def test_create(self):
+        data = {
+            'user': 1,
+            'skill_level': 3,
+            'location': self.location.id,
+            'game_time': '2018-12-25T14:30:00Z',
+            'two_goalies_needed': True,
+        }
+
+        response = self.client.post(self.create_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Location.objects.count(), 1)
+        # self.assertEqual(response.data['user'], data['user'])
+        self.assertEqual(response.data['location'], data['location'])
+        self.assertEqual(response.data['game_time'], data['game_time'])
+        self.assertEqual(response.data['two_goalies_needed'], data['two_goalies_needed'])
+
+
+class GameDelete(APITestCase):
+    def setUp(self):
+        self.test_user_1 = User.objects.create_user('tester_one', 'test1@fakefalse.com', 'test1password')
+        self.test_user_1.first_name = 'Hannah'
+        self.test_user_1.last_name = 'Test'
+
+        self.test_user_2 = User.objects.create_user('tester_two', 'test2@fakefalse.com', 'test2password')
+        self.test_user_2.first_name = 'Rob'
+        self.test_user_2.last_name = 'Tester'
+
+        self.location = Location.objects.create(name='Kitchener',
+                                                latitude=43.4516395,
+                                                longitude=-80.49253369999997)
+
+        self.delete_url = reverse('game-list')
+
+        self.game = Game.objects.create(user=self.test_user_1,
+                                        skill_level=3,
+                                        location=self.location,
+                                        game_time='2018-12-25T14:30:00Z',
+                                        two_goalies_needed=True)
+
+    def test_delete(self):
+        self.assertEqual(Game.objects.count(), 1)
+        response = self.client.delete(self.delete_url + '1/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Game.objects.count(), 0)
+
+    def test_delete_bad_url(self):
+        response = self.client.delete(self.delete_url + '115/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class GameUpdate(APITestCase):
+    def setUp(self):
+        self.test_user_1 = User.objects.create_user('tester_one', 'test1@fakefalse.com', 'test1password')
+        self.test_user_1.first_name = 'Hannah'
+        self.test_user_1.last_name = 'Test'
+
+        self.location = Location.objects.create(name='Kitchener',
+                                                latitude=43.4516395,
+                                                longitude=-80.49253369999997)
+
+        self.update_url = reverse('game-list')
+
+        self.game = Game.objects.create(user=self.test_user_1,
+                                        skill_level=3,
+                                        location=self.location,
+                                        game_time='2018-12-25T14:30:00Z',
+                                        two_goalies_needed=True)
+
+    def test_update(self):
+        data = {'skill_level': 1}
+        response = self.client.patch(self.update_url + '1/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['skill_level'], data['skill_level'])
+        self.assertEqual(response.data['location'], 1)
+
+
+class LocationCreate(APITestCase):
+    def setUp(self):
+        self.create_url = reverse('location-list')
+
+    def test_create(self):
+        data = {
+            'name': 'Kitchener',
+            'latitude': 43.45164,
+            'longitude': -80.492534,
+        }
+
+        response = self.client.post(self.create_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Location.objects.count(), 1)
+        self.assertEqual(response.data['name'], data['name'])
+        self.assertEqual(response.data['latitude'], data['latitude'])
+        self.assertEqual(response.data['longitude'], data['longitude'])
+
+
+class MessageCreate(APITestCase):
+    def setUp(self):
+        self.test_user_1 = User.objects.create_user('tester_one', 'test1@gmail.com', 'test1password')
+        self.test_user_1.first_name = 'Hannah'
+        self.test_user_1.last_name = 'Test'
+
+        self.test_user_2 = User.objects.create_user('tester_two', 'test2@gmail.com', 'test2password')
+        self.test_user_2.first_name = 'Rob'
+        self.test_user_2.last_name = 'Tester'
+
+        self.location = Location.objects.create()
+
+        self.game = Game.objects.create(location=self.location)
+
+        # URL for creation
+        self.create_url = reverse('message-list')
+
+    def test_create(self):
+        data = {
+            'game': self.game.id,
+            'body': 'This is my test message. Hello other person',
+            'game_user': 1,
+            'goalie_user': 2,
+            'sender_is_goalie': True
+        }
+
+        response = self.client.post(self.create_url, data, format='json')
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Message.objects.count(), 1)
+        self.assertEqual(response.data['game'], data['game'])
+        self.assertEqual(response.data['body'], data['body'])
+        self.assertEqual(response.data['game_user'], data['game_user'])
+        self.assertEqual(response.data['goalie_user'], data['goalie_user'])
+        self.assertEqual(response.data['sender_is_goalie'], data['sender_is_goalie'])
+
+
+class UserCreate(APITestCase):
     def setUp(self):
         # We want to go ahead and originally create a user.
         self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
@@ -46,7 +195,6 @@ class UserCreation(APITestCase):
         self.assertEqual(response.data['email'], data['email'])
         self.assertEqual(response.data['first_name'], data['first_name'])
         self.assertEqual(response.data['last_name'], data['last_name'])
-        self.assertFalse('password' in response.data)
 
         # Check that a profile was created as well
         self.assertEqual(Profile.objects.count(), 2)
@@ -87,92 +235,24 @@ class UserCreation(APITestCase):
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(response.data['email'][0], 'Enter a valid email address.')
 
-
-class GameCreation(APITestCase):
+class UserAuthenticate(APITestCase):
     def setUp(self):
-        self.test_user_1 = User.objects.create_user('tester_one', 'test1@fakefalse.com', 'test1password')
-        self.test_user_1.first_name = 'Hannah'
-        self.test_user_1.last_name = 'Test'
+        # We want to go ahead and originally create a user.
+        self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
+        self.test_user.first_name = 'Hannah'
+        self.test_user.last_name = 'Test'
+        self.test_user.is_active = True
 
-        self.test_user_2 = User.objects.create_user('tester_two', 'test2@fakefalse.com', 'test2password')
-        self.test_user_2.first_name = 'Rob'
-        self.test_user_2.last_name = 'Tester'
+        # URL for creating an account.
+        self.token_url = reverse('token-get')
 
-        self.location = Location.objects.create(name='Kitchener',
-                                                latitude=43.4516395,
-                                                longitude=-80.49253369999997)
-
-        self.create_url = reverse('game-list')
-
-    def test_create(self):
+    def test_user_get_token(self):
         data = {
-            'user': 1,
-            'skill_level': 3,
-            'location': self.location.id,
-            'game_time': '2018-12-25T14:30:00Z',
-            'two_goalies_needed': True,
+            'username': 'testuser',
+            'password': 'testpassword'
         }
 
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Location.objects.count(), 1)
-        # self.assertEqual(response.data['user'], data['user'])
-        self.assertEqual(response.data['location'], data['location'])
-        self.assertEqual(response.data['game_time'], data['game_time'])
-        self.assertEqual(response.data['two_goalies_needed'], data['two_goalies_needed'])
-
-
-class LocationCreation(APITestCase):
-    def setUp(self):
-        self.create_url = reverse('location-list')
-
-    def test_create(self):
-        data = {
-            'name': 'Kitchener',
-            'latitude': 43.45164,
-            'longitude': -80.492534,
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Location.objects.count(), 1)
-        self.assertEqual(response.data['name'], data['name'])
-        self.assertEqual(response.data['latitude'], data['latitude'])
-        self.assertEqual(response.data['longitude'], data['longitude'])
-
-
-class MessageTest(APITestCase):
-    def setUp(self):
-        self.test_user_1 = User.objects.create_user('tester_one', 'test1@gmail.com', 'test1password')
-        self.test_user_1.first_name = 'Hannah'
-        self.test_user_1.last_name = 'Test'
-
-        self.test_user_2 = User.objects.create_user('tester_two', 'test2@gmail.com', 'test2password')
-        self.test_user_2.first_name = 'Rob'
-        self.test_user_2.last_name = 'Tester'
-
-        self.location = Location.objects.create()
-
-        self.game = Game.objects.create(location=self.location)
-
-        # URL for creation
-        self.create_url = reverse('message-list')
-
-    def test_create(self):
-        data = {
-            'game': self.game.id,
-            'body': 'This is my test message. Hello other person',
-            'game_user': 1,
-            'goalie_user': 2,
-            'sender_is_goalie': True
-        }
-
-        response = self.client.post(self.create_url, data, format='json')
+        response = self.client.post(self.token_url, data, format='json')
         print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Message.objects.count(), 1)
-        self.assertEqual(response.data['game'], data['game'])
-        self.assertEqual(response.data['body'], data['body'])
-        self.assertEqual(response.data['game_user'], data['game_user'])
-        self.assertEqual(response.data['goalie_user'], data['goalie_user'])
-        self.assertEqual(response.data['sender_is_goalie'], data['sender_is_goalie'])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['token']), 40)

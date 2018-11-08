@@ -14,7 +14,7 @@ urlpatterns = format_suffix_patterns([
         views.activate, name='activate-account'),
 
     # Used to get a token for a user
-    url(r'^api-token-auth/', rest_views.obtain_auth_token),
+    url(r'^api-token-auth/', rest_views.obtain_auth_token, name='token-get'),
 
     # Login and logout view for the browseable API
     url(r'api-auth/', include('rest_framework.urls', namespace='rest_framework')),
