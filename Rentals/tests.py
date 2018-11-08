@@ -8,8 +8,6 @@ from Rentals.models import Game, Location, Message, Profile
 
 # TODO: Write tests for update, patch, and delete
 
-# TODO: Write tests that check token generation
-
 # TODO: Write tests that check password reset
 
 # TODO: Write test that account activation via email
@@ -173,6 +171,7 @@ class UserCreate(APITestCase):
 
         # URL for creating an account.
         self.create_url = reverse('user-list')
+        self.profile_get_url = reverse('profile-list')
 
     def test_create_user(self):
         # Ensure we can create a new user and a valid token is created with it.
@@ -234,6 +233,11 @@ class UserCreate(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(response.data['email'][0], 'Enter a valid email address.')
+
+    def test_create_profile_on_user_create(self):
+        response = self.client.get(self.profile_get_url + '1/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
 
 class UserAuthenticate(APITestCase):
     def setUp(self):
