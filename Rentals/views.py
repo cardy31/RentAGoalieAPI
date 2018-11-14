@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
+from rest_framework.permissions import BasePermission, IsAdminUser
+
 from .serializers import *
 from .tokens import account_activation_token
 
@@ -76,6 +78,7 @@ class ApplyForGame(APIView):
 #     return queryset[0], queryset[1]
 
 
+# TODO: Don't let users create games if where they aren't the user
 # Game Model Views
 class GameList(generics.ListCreateAPIView):
     queryset = Game.objects.all()
@@ -150,6 +153,7 @@ class LocationDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = LocationSerializer
 
 
+# TODO: Make sure only sender/receiver can see their messages
 # Message Model Views
 class MessageList(generics.ListCreateAPIView):
     queryset = Message.objects.all()
@@ -176,11 +180,13 @@ class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
 class UserList(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = IsAdminUser
 
 
 class UserDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = IsAdminUser
 
 
 # These become links visible on the homepage of the browseable API. Additional endpoints

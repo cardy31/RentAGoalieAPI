@@ -35,7 +35,6 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    # TODO: Don't let non-super users create users
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'password', 'first_name',

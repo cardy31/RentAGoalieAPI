@@ -10,7 +10,7 @@ from Rentals.models import Game, Location, Message, Profile
 from Rentals.views import GameList, GameDetail, LocationList, LocationDetail, MessageList, MessageDetail,\
     UserList, UserDetail, ProfileList, ProfileDetail
 
-# TODO: Write tests for update, patch, and delete
+# TODO: Write tests for create, patch, and delete
 
 # TODO: Write tests that check password reset
 
@@ -180,6 +180,27 @@ class LocationDelete(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
+class LocationUpdate(APITestCase):
+    def setUp(self):
+        self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
+        self.update_url = reverse('location-list')
+        new_location = Location.objects.create()
+        new_location.name = 'Kitchener'
+        new_location.latitude = 43.45164
+        new_location.longitude = -80.492534
+
+    def test_update(self):
+        data = {'longitude': 46}
+
+        view = LocationDetail.as_view()
+        request = factory.patch(self.update_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        response = view(request, pk=1)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['longitude'], data['longitude'])
+
+
 class MessageCreate(APITestCase):
     def setUp(self):
         self.test_user_1 = User.objects.create_user('tester_one', 'test1@gmail.com', 'test1password')
@@ -227,6 +248,7 @@ class UserCreate(APITestCase):
         self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
         self.test_user.first_name = 'Hannah'
         self.test_user.last_name = 'Test'
+        self.test_user.is_superuser = False
 
         # URL for creating an account.
         self.create_url = reverse('user-list')
