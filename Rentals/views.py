@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
-from rest_framework.permissions import BasePermission, IsAdminUser
+from rest_framework.permissions import IsAdminUser
 
 from .serializers import *
 from .tokens import account_activation_token
@@ -56,10 +56,12 @@ class ApplyForGame(APIView):
         if not game.goalie_one:
             game.goalie_one = goalie
             game.save()
+            # TODO: Add push notification
             return Response("Goalie saved", status=status.HTTP_202_ACCEPTED)
         elif not game.goalie_two and game.twoGoaliesNeeded:
             game.goalie_two = goalie
             game.save()
+            # TODO: Add push notification
             return Response("Goalie saved", status=status.HTTP_202_ACCEPTED)
         else:
             return Response("Game has already been filled", status=status.HTTP_410_GONE)
@@ -78,7 +80,10 @@ class ApplyForGame(APIView):
 #     return queryset[0], queryset[1]
 
 
-# TODO: Don't let users create games if where they aren't the user
+# TODO: Don't let users create games where they aren't the user
+# TODO: Authorize credit card on create
+# TODO: Charge credit care at game time iff there are adequate goalies for the game
+# TODO: Deal with billing for the game
 # Game Model Views
 class GameList(generics.ListCreateAPIView):
     queryset = Game.objects.all()
@@ -109,7 +114,7 @@ def activate(request, uidb64, token):
 
 
 class CheckUsernameUnique(APIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAdminUser,)
 
     @staticmethod
     def post(request):
@@ -126,7 +131,7 @@ class CheckUsernameUnique(APIView):
 
 
 class CheckEmailUnique(APIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAdminUser,)
 
     @staticmethod
     def post(request):
@@ -153,16 +158,27 @@ class LocationDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = LocationSerializer
 
 
-# TODO: Make sure only sender/receiver can see their messages
 # Message Model Views
 class MessageList(generics.ListCreateAPIView):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
 
+    def get(self, request, *args, **kwargs):
+        if request.user.is_superuser is False:
+            self.queryset = Message.objects.filter(game_user=request.user).__or__(
+                Message.objects.filter(goalie_user=request.user))
+        return super().get(request, *args, **kwargs)
 
-class MessageDetail(generics.RetrieveUpdateDestroyAPIView):
+
+class MessageDetail(generics.RetrieveAPIView):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
+
+    def get(self, request, *args, **kwargs):
+        if request.user.is_superuser is False:
+            self.queryset = Message.objects.filter(game_user=request.user).__or__(
+                Message.objects.filter(goalie_user=request.user))
+        return super().get(request, *args, **kwargs)
 
 
 # Profile Model Views
@@ -177,16 +193,22 @@ class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 # User Model Views
+# TODO: Throttle create requests
 class UserList(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = IsAdminUser
+    permission_classes = (AllowAny,)
+
+    def get(self, request, *args, **kwargs):
+        if request.user.is_superuser is False:
+            self.queryset = User.objects.filter(id=request.user.id)
+        return super().get(request, *args, **kwargs)
 
 
-class UserDetail(generics.RetrieveUpdateDestroyAPIView):
+class UserDetail(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = IsAdminUser
+    permission_classes = (AllowAny,)
 
 
 # These become links visible on the homepage of the browseable API. Additional endpoints

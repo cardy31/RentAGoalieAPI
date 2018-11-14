@@ -61,6 +61,9 @@ class Message(models.Model):
 
 
 class Profile(models.Model):
+    # Credit card number should be validated fully on the front end
+    user = models.ForeignKey(User, related_name='profileUser', on_delete=models.CASCADE, null=True)
+    credit_card_number = models.IntegerField(default=0)
     games_played = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     is_goalie = models.BooleanField(default=True, blank=False, null=False)
     locations = models.ManyToManyField('Location')
@@ -78,6 +81,7 @@ class Profile(models.Model):
             # Create a profile entry with the same primary key as the user entry
             Profile.objects.create(pk=instance.id)
             profile = Profile.objects.get(pk=instance.id)
+            profile.user = User.objects.get(pk=instance.id)
             profile.reset_token = account_activation_token.make_token(User.objects.get(pk=instance.id))
             Token.objects.create(user=User.objects.get(pk=instance.id))
             profile.access_token = str(Token.objects.get(user=User.objects.get(pk=instance.id)))

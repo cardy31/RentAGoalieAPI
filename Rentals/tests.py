@@ -204,12 +204,7 @@ class LocationUpdate(APITestCase):
 class MessageCreate(APITestCase):
     def setUp(self):
         self.test_user_1 = User.objects.create_user('tester_one', 'test1@gmail.com', 'test1password')
-        self.test_user_1.first_name = 'Hannah'
-        self.test_user_1.last_name = 'Test'
-
         self.test_user_2 = User.objects.create_user('tester_two', 'test2@gmail.com', 'test2password')
-        self.test_user_2.first_name = 'Rob'
-        self.test_user_2.last_name = 'Tester'
 
         self.location = Location.objects.create()
 
@@ -228,7 +223,7 @@ class MessageCreate(APITestCase):
         }
 
         view = MessageList.as_view()
-        request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
+        request = factory.post(self.create_url, json.dumps(data), content_type='application/json', user=self.test_user_1)
         force_authenticate(request, user=self.test_user_1)
         response = view(request)
 
@@ -242,13 +237,100 @@ class MessageCreate(APITestCase):
         self.assertEqual(response.data['sender_is_goalie'], data['sender_is_goalie'])
 
 
+class MessageGet(APITestCase):
+    def setUp(self):
+        self.test_user_1 = User.objects.create_user('tester_one', 'test1@gmailfake.com', 'test1password')
+        self.test_user_2 = User.objects.create_user('tester_two', 'test2@gmailfake.com', 'test2password')
+        self.test_user_3 = User.objects.create_user('tester_three', 'test3@gmailfake.com', 'test3password')
+        self.test_user_super = User.objects.create_user('tester_four', 'test4@gmailfake.com', 'test4password')
+        self.test_user_super.is_superuser = True
+        self.location = Location.objects.create()
+        self.game = Game.objects.create(location=self.location)
+        self.message = Message.objects.create(game=self.game,
+                                              body='Foobar',
+                                              game_user=self.test_user_1,
+                                              goalie_user=self.test_user_2)
+        self.get_url = reverse('message-list')
+
+    def test_get_list_user_is_renter_in_message(self):
+        view = MessageList.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+    def test_get_list_user_is_goalie_in_message(self):
+        view = MessageList.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_2)
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+    def test_get_list_user_not_in_message(self):
+        view = MessageList.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_3)
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_get_list_user_is_superuser(self):
+        view = MessageList.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_super)
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+    def test_get_detail_user_is_renter_in_message(self):
+        view = MessageDetail.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request, pk=1)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 7)
+
+    def test_get_detail_user_is_goalie_in_message(self):
+        view = MessageDetail.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_2)
+        response = view(request, pk=1)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 7)
+
+    def test_get_detail_user_not_in_message(self):
+        view = MessageDetail.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_3)
+        response = view(request, pk=1)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(len(response.data), 1)
+
+    def test_get_detail_user_is_superuser(self):
+        view = MessageDetail.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_super)
+        response = view(request, pk=1)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 7)
+
+
 class UserCreate(APITestCase):
     def setUp(self):
         # We want to go ahead and originally create a user.
         self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
         self.test_user.first_name = 'Hannah'
         self.test_user.last_name = 'Test'
-        self.test_user.is_superuser = False
 
         # URL for creating an account.
         self.create_url = reverse('user-list')
@@ -266,7 +348,6 @@ class UserCreate(APITestCase):
         }
 
         request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
-        force_authenticate(request, user=self.test_user)
         response = self.view(request)
 
         # Check that status code is 201
@@ -290,7 +371,6 @@ class UserCreate(APITestCase):
                 }
 
         request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
-        force_authenticate(request, user=self.test_user)
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -305,7 +385,6 @@ class UserCreate(APITestCase):
                 }
 
         request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
-        force_authenticate(request, user=self.test_user)
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -320,7 +399,6 @@ class UserCreate(APITestCase):
         }
 
         request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
-        force_authenticate(request, user=self.test_user)
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -328,6 +406,12 @@ class UserCreate(APITestCase):
         self.assertEqual(response.data['email'][0], 'Enter a valid email address.')
 
 
+# TODO: Write test cases for the UserDetail view and UserList view
+# class UserGet(APITestCase):
+#     def setUp(self):
+
+
+# TODO: Fix up permissions and write more test cases here
 class ProfileCreate(APITestCase):
     def setUp(self):
         self.profile_get_url = reverse('profile-list')
