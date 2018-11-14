@@ -1,16 +1,22 @@
 from django.contrib.auth.models import User
 
+import json
+
 from rest_framework import status
 from rest_framework.reverse import reverse
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIRequestFactory, force_authenticate
 
 from Rentals.models import Game, Location, Message, Profile
+from Rentals.views import GameList, GameDetail, LocationList, LocationDetail, MessageList, MessageDetail,\
+    UserList, UserDetail, ProfileList, ProfileDetail
 
 # TODO: Write tests for update, patch, and delete
 
 # TODO: Write tests that check password reset
 
-# TODO: Write test that account activation via email
+# TODO: Write test to check account activation via email
+
+factory = APIRequestFactory()
 
 
 class GameCreate(APITestCase):
@@ -18,10 +24,12 @@ class GameCreate(APITestCase):
         self.test_user_1 = User.objects.create_user('tester_one', 'test1@fakefalse.com', 'test1password')
         self.test_user_1.first_name = 'Hannah'
         self.test_user_1.last_name = 'Test'
+        self.test_user_1.save()
 
         self.test_user_2 = User.objects.create_user('tester_two', 'test2@fakefalse.com', 'test2password')
         self.test_user_2.first_name = 'Rob'
         self.test_user_2.last_name = 'Tester'
+        self.test_user_2.save()
 
         self.location = Location.objects.create(name='Kitchener',
                                                 latitude=43.4516395,
@@ -38,10 +46,13 @@ class GameCreate(APITestCase):
             'two_goalies_needed': True,
         }
 
-        response = self.client.post(self.create_url, data, format='json')
+        view = GameList.as_view()
+        request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Location.objects.count(), 1)
-        # self.assertEqual(response.data['user'], data['user'])
         self.assertEqual(response.data['location'], data['location'])
         self.assertEqual(response.data['game_time'], data['game_time'])
         self.assertEqual(response.data['two_goalies_needed'], data['two_goalies_needed'])
@@ -70,13 +81,20 @@ class GameDelete(APITestCase):
                                         two_goalies_needed=True)
 
     def test_delete(self):
+        view = GameDetail.as_view()
+        request = factory.delete(self.delete_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
         self.assertEqual(Game.objects.count(), 1)
-        response = self.client.delete(self.delete_url + '1/')
+        response = view(request, pk=1)
+
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Game.objects.count(), 0)
 
     def test_delete_bad_url(self):
-        response = self.client.delete(self.delete_url + '115/')
+        view = GameDetail.as_view()
+        request = factory.delete(self.delete_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request, pk=115)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
@@ -100,7 +118,12 @@ class GameUpdate(APITestCase):
 
     def test_update(self):
         data = {'skill_level': 1}
-        response = self.client.patch(self.update_url + '1/', data, format='json')
+
+        view = GameDetail.as_view()
+        request = factory.patch(self.update_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request, pk=1)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['skill_level'], data['skill_level'])
         self.assertEqual(response.data['location'], 1)
@@ -108,6 +131,8 @@ class GameUpdate(APITestCase):
 
 class LocationCreate(APITestCase):
     def setUp(self):
+        self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
+
         self.create_url = reverse('location-list')
 
     def test_create(self):
@@ -117,12 +142,42 @@ class LocationCreate(APITestCase):
             'longitude': -80.492534,
         }
 
-        response = self.client.post(self.create_url, data, format='json')
+        view = LocationList.as_view()
+        request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        response = view(request)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Location.objects.count(), 1)
         self.assertEqual(response.data['name'], data['name'])
         self.assertEqual(response.data['latitude'], data['latitude'])
         self.assertEqual(response.data['longitude'], data['longitude'])
+
+
+class LocationDelete(APITestCase):
+    def setUp(self):
+        self.test_user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
+        self.delete_url = reverse('location-list')
+        new_location = Location.objects.create()
+        new_location.name = 'Kitchener'
+        new_location.latitude = 43.45164
+        new_location.longitude = -80.492534
+
+    def test_delete(self):
+        view = LocationDetail.as_view()
+        request = factory.delete(self.delete_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        self.assertEqual(Location.objects.count(), 1)
+        response = view(request, pk=1)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Location.objects.count(), 0)
+
+    def test_delete_bad_url(self):
+        view = LocationDetail.as_view()
+        request = factory.delete(self.delete_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        response = view(request, pk=115)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class MessageCreate(APITestCase):
@@ -151,8 +206,12 @@ class MessageCreate(APITestCase):
             'sender_is_goalie': True
         }
 
-        response = self.client.post(self.create_url, data, format='json')
-        print(response.data)
+        view = MessageList.as_view()
+        request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request)
+
+        # print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Message.objects.count(), 1)
         self.assertEqual(response.data['game'], data['game'])
@@ -171,7 +230,8 @@ class UserCreate(APITestCase):
 
         # URL for creating an account.
         self.create_url = reverse('user-list')
-        self.profile_get_url = reverse('profile-list')
+
+        self.view = UserList.as_view()
 
     def test_create_user(self):
         # Ensure we can create a new user and a valid token is created with it.
@@ -183,7 +243,9 @@ class UserCreate(APITestCase):
             'last_name': 'Tester',
         }
 
-        response = self.client.post(self.create_url, data, format='json')
+        request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        response = self.view(request)
 
         # Check that status code is 201
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -205,7 +267,10 @@ class UserCreate(APITestCase):
                 'password': 'foobar'
                 }
 
-        response = self.client.post(self.create_url, data, format='json')
+        request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        response = self.view(request)
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(response.data['username'][0], 'This field may not be blank.')
@@ -217,7 +282,10 @@ class UserCreate(APITestCase):
                 'password': 'testuser'
                 }
 
-        response = self.client.post(self.create_url, data, format='json')
+        request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        response = self.view(request)
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(response.data['username'][0], 'A user with that username already exists.')
@@ -229,13 +297,26 @@ class UserCreate(APITestCase):
             'passsword': 'foobarbaz'
         }
 
-        response = self.client.post(self.create_url, data, format='json')
+        request = factory.post(self.create_url, json.dumps(data), content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        response = self.view(request)
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(response.data['email'][0], 'Enter a valid email address.')
 
+
+class ProfileCreate(APITestCase):
+    def setUp(self):
+        self.profile_get_url = reverse('profile-list')
+        self.view = ProfileDetail.as_view()
+        self.test_user = User.objects.create_user('tester_one', 'test1@fakefalse.com', 'test1password')
+
     def test_create_profile_on_user_create(self):
-        response = self.client.get(self.profile_get_url + '1/')
+        request = factory.get(self.profile_get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user)
+        response = self.view(request, pk=1)
+        # response = self.client.get(self.profile_get_url + '1/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
@@ -257,6 +338,5 @@ class UserAuthenticate(APITestCase):
         }
 
         response = self.client.post(self.token_url, data, format='json')
-        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['token']), 40)
