@@ -3,3 +3,4 @@ RentAGoalie/secret_key.txt
 .idea
 venv
 __pycache__
+db.sqlite3

@@ -22,6 +22,8 @@ urlpatterns = format_suffix_patterns([
     # Let goalies apply for games they would like to play in
     url(r'^apply/$', views.ApplyForGame.as_view(), name='apply'),
 
+    url(r'^unapply/$', views.RemoveGoalieFromGame.as_view(), name='unapply'),
+
     # Let the front-end check if a username or email is already in use
     url(r'^check-username/$', views.CheckUsernameUnique.as_view(), name='check-username'),
     url(r'^check-email/$', views.CheckEmailUnique.as_view(), name='check-email'),

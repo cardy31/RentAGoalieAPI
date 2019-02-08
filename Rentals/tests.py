@@ -16,6 +16,8 @@ from Rentals.views import GameList, GameDetail, LocationList, LocationDetail, Me
 
 # TODO: Write test to check account activation via email
 
+# TODO: Write ApplyForGame tests
+
 factory = APIRequestFactory()
 
 
@@ -37,7 +39,7 @@ class GameCreate(APITestCase):
 
         self.create_url = reverse('game-list')
 
-    def test_create(self):
+    def test_create_with_same_user(self):
         data = {
             'user': 1,
             'skill_level': 3,
@@ -127,6 +129,8 @@ class GameUpdate(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['skill_level'], data['skill_level'])
         self.assertEqual(response.data['location'], 1)
+
+# TODO: Game GET
 
 
 class LocationCreate(APITestCase):
@@ -406,9 +410,70 @@ class UserCreate(APITestCase):
         self.assertEqual(response.data['email'][0], 'Enter a valid email address.')
 
 
-# TODO: Write test cases for the UserDetail view and UserList view
-# class UserGet(APITestCase):
-#     def setUp(self):
+class UserGet(APITestCase):
+    def setUp(self):
+        self.test_user_1 = User.objects.create_user('tester_one', 'test1@gmailfake.com', 'test1password')
+        self.test_user_2 = User.objects.create_user('tester_two', 'test2@gmailfake.com', 'test2password')
+        self.test_user_3 = User.objects.create_user('tester_three', 'test3@gmailfake.com', 'test3password')
+        self.test_user_super = User.objects.create_user('tester_four', 'test4@gmailfake.com', 'test4password')
+        self.test_user_super.is_superuser = True
+
+        self.get_url = reverse('user-list')
+
+    # Normal user can only see self
+    def test_get_list_as_normal_user(self):
+        view = UserList.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request)
+
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['username'], 'tester_one')
+
+    # Superuser can see all users
+    def test_get_list_as_superuser(self):
+        view = UserList.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_super)
+        response = view(request)
+
+        self.assertEqual(len(response.data), 4)
+
+    # Normal user can get detail of self
+    def test_get_detail_of_normal_user_as_same_user(self):
+        view = UserDetail.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request, pk=1)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 8)
+        self.assertEqual(response.data['username'], 'tester_one')
+
+    # Normal user cannot get detail of another user
+    def test_get_detail_of_normal_user_as_different_user(self):
+        view = UserDetail.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_1)
+        response = view(request, pk=2)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(len(response.data), 1)
+
+    # Superuser can get detail of any user
+    def test_get_detail_of_normal_user_as_superuser(self):
+        view = UserDetail.as_view()
+        request = factory.get(self.get_url, content_type='application/json')
+        force_authenticate(request, user=self.test_user_super)
+        response = view(request, pk=2)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 8)
+        self.assertEqual(response.data['username'], 'tester_two')
+
+# TODO: User delete tests
+
+# TODO: User update tests
 
 
 # TODO: Fix up permissions and write more test cases here

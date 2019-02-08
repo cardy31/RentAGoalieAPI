@@ -24,8 +24,10 @@ with open(os.path.join(BASE_DIR, 'RentAGoalie/secret_key.txt')) as f:
     SECRET_KEY = f.read().strip()
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# FIXME: Turn this off before running on server
 DEBUG = True
 
+# FIXME: Change this before sending to server
 ALLOWED_HOSTS = ['*', ]
 
 
@@ -41,9 +43,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'Rentals.apps.RentalsConfig',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -52,6 +56,17 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = True
+
+# TODO: Create a proper whitelist instead of allowing everything
+# CORS_ORIGIN_WHITELIST = (
+#     'robcardy.com',
+#     'hostname.example.com',
+#     'localhost:8000',
+#     'localhost:3000',
+#     '127.0.0.1:9000'
+# )
 
 ROOT_URLCONF = 'RentAGoalie.urls'
 
@@ -66,8 +81,7 @@ EMAIL_PORT = 587
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'Rentals/templates')]
-        ,
+        'DIRS': [os.path.join(BASE_DIR, 'Rentals/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -140,7 +154,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        # 'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     )
 }

@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
@@ -18,7 +18,9 @@ CURRENT_SITE = 'localhost:8000'
 class Game(models.Model):
     user = models.ForeignKey(User, related_name='gameUser', on_delete=models.CASCADE, null=True)
     skill_level = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], default=5)  # 1 is best
-    location = models.ForeignKey('Location', on_delete=models.CASCADE)
+    location = models.CharField(max_length=512, default="No location string given")
+    latitude = models.FloatField(default=0.0)
+    longitude = models.FloatField(default=0.0)
     # Format is 2018-05-16 20:00:00
     game_time = models.DateTimeField(default='1970-01-01T00:00:00Z', validators=[])
     creation_time = models.DateTimeField(auto_now=True)
@@ -31,12 +33,13 @@ class Game(models.Model):
         return "Id: {}, game_time: {}, location:" \
                " {} ({}, {}), skill_level: {}".format(self.id,
                                                       self.game_time,
-                                                      self.location.name,
-                                                      self.location.latitude,
-                                                      self.location.longitude,
+                                                      self.location,
+                                                      self.latitude,
+                                                      self.longitude,
                                                       self.skill_level,)
 
 
+# Locations that goalies can choose. Game locations will be map coordinates
 class Location(models.Model):
     # Name of the location, if one was given
     name = models.CharField(max_length=64, default="No name given")
@@ -62,7 +65,9 @@ class Message(models.Model):
 
 class Profile(models.Model):
     # Credit card number should be validated fully on the front end
-    user = models.ForeignKey(User, related_name='profileUser', on_delete=models.CASCADE, null=True)
+    access_token = models.CharField(max_length=64, default='0')
+    # TODO: If cancellations exceeds threshold, account should be made inactive
+    cancellations = models.IntegerField(default=0)
     credit_card_number = models.IntegerField(default=0)
     games_played = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     is_goalie = models.BooleanField(default=True, blank=False, null=False)
@@ -72,7 +77,7 @@ class Profile(models.Model):
     reset_token = models.CharField(max_length=64, default='0')
     skill_level = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)],
                                       default=5)  # 1 is the best
-    access_token = models.CharField(max_length=64, default='0')
+    user = models.ForeignKey(User, related_name='profileUser', on_delete=models.CASCADE, null=True)
 
     @staticmethod
     @receiver(post_save, sender=User)
@@ -81,6 +86,7 @@ class Profile(models.Model):
             # Create a profile entry with the same primary key as the user entry
             Profile.objects.create(pk=instance.id)
             profile = Profile.objects.get(pk=instance.id)
+            # TODO: Write a test case to ensure that the user saved in profile is correct
             profile.user = User.objects.get(pk=instance.id)
             profile.reset_token = account_activation_token.make_token(User.objects.get(pk=instance.id))
             Token.objects.create(user=User.objects.get(pk=instance.id))
@@ -92,6 +98,7 @@ class Profile(models.Model):
     def hash_user_password(sender, instance, created, **kwargs):
         if created:
             user = User.objects.get(pk=instance.id)
+            # TODO: There is probably a better way to check if the password was hashed
             if user.password[:6] != 'pbkdf2':
                 user.set_password(user.password)
                 user.save()
@@ -111,3 +118,9 @@ class Profile(models.Model):
             to_email = user.email
             email = EmailMessage(subject, body, to=[to_email])
             email.send()
+
+    @staticmethod
+    @receiver(post_delete, sender=User)
+    def delete_profile_on_user_delete(sender, instance, deleted, **kwargs):
+        profile = Profile.objects.get(pk=instance.id)
+        profile.delete()
