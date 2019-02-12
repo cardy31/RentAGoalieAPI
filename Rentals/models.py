@@ -71,7 +71,7 @@ class Profile(models.Model):
     credit_card_number = models.IntegerField(default=0)
     games_played = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     is_goalie = models.BooleanField(default=True, blank=False, null=False)
-    locations = models.ManyToManyField('Location')
+    location = models.ForeignKey(Location, related_name='profileLocation', on_delete=models.CASCADE, default=1)
     picture = models.ImageField(upload_to='media/', null=True, max_length=255)
     rating = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
     reset_token = models.CharField(max_length=64, default='0')
@@ -98,13 +98,13 @@ class Profile(models.Model):
     def hash_user_password(sender, instance, created, **kwargs):
         if created:
             user = User.objects.get(pk=instance.id)
-            # TODO: There is probably a better way to check if the password was hashed
+            # TODO: There is definitely a better way to check if the password was hashed
             if user.password[:6] != 'pbkdf2':
                 user.set_password(user.password)
                 user.save()
 
     @staticmethod
-    @receiver(post_save, sender=User)
+    # @receiver(post_save, sender=User)
     def send_verification_email(sender, instance, created, **kwargs):
         if created:
             user = instance

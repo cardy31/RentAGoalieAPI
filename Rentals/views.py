@@ -17,9 +17,16 @@ from rest_framework.permissions import IsAdminUser
 from .serializers import *
 from .tokens import account_activation_token
 
+import geopy.distance
+
 # Wait time in minutes
 WAIT_TIME = 5
 CURRENT_SITE = 'localhost:8000'
+
+
+# Coords should be in tuple format (3.14, -3.14)
+def calculate_distance_between_coordinate(coords1, coords2):
+    return geopy.distance.distance(coords1, coords2).km
 
 
 # Normal auth
@@ -113,6 +120,8 @@ class GameList(generics.ListCreateAPIView):
     serializer_class = GameSerializer
 
     def get(self, request, *args, **kwargs):
+        print("Printing request info")
+        print(request.data)
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -120,7 +129,8 @@ class GameList(generics.ListCreateAPIView):
         # print('request.user.id: {}, request.data: {}'.format(request.user.id, request.data['user']))
         print("Printing request")
         print(request)
-        print(request.data)
+        # TODO: Use the user ID here to calculate the distance to available games. If they're too far, don't return them
+        print(request.data["user"])
         # print(request.headers)
         if 'user' not in request.data or \
                 (request.user.id != request.data['user'] and request.user.is_superuser is False):
@@ -134,6 +144,7 @@ class GameDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = GameSerializer
 
 
+# TODO: Figure out why this error happened
 # This one was being funny on the server. Commenting out the activate at the bottom seemed to fix it.
 def activate(request, uidb64, token):
     print('uidb64 is {}, token is {}, request is {}'.format(uidb64, token, request))
